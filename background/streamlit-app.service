@@ -1,0 +1,15 @@
+[Unit]
+Description=Streamlit App Service
+After=network.target
+
+[Service]
+Type=simple
+User=minkim
+WorkingDirectory=/Users/minkim/git_test/kpmg-2025/data2/supabase1
+Environment=PATH=/Users/minkim/miniconda3/envs/your_env/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/Users/minkim/miniconda3/envs/your_env/bin/streamlit run app_supabase.py --server.port 8501 --server.address 0.0.0.0
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

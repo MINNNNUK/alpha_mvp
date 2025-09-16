@@ -1,0 +1,11 @@
+# Supabase 환경변수 설정
+# .env 파일을 생성하고 아래 값들을 설정하세요
+
+# Supabase 프로젝트 URL (예: https://your-project-id.supabase.co)
+SUPABASE_URL=your_supabase_project_url
+
+# Supabase Anon Key (Public API Key)
+SUPABASE_KEY=your_supabase_anon_key
+
+# 선택사항: 데이터베이스 연결 테스트용
+# SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
