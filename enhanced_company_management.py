@@ -388,3 +388,5 @@ def load_companies():
         st.error(f"회사 데이터 로드 실패: {e}")
         return pd.DataFrame()
 
+
+

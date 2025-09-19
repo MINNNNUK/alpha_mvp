@@ -236,9 +236,9 @@ def load_announcements() -> pd.DataFrame:
 
 @st.cache_data(ttl=60)
 def load_recommendations(company_id: int = None) -> pd.DataFrame:
-    """추천 데이터 로드 (recommend2 테이블 사용)"""
+    """추천 데이터 로드 (recommend3 테이블 사용)"""
     try:
-        query = supabase.table('recommend2').select('*')
+        query = supabase.table('recommend3').select('*')
         if company_id:
             # load_companies에서 추출한 company_name 사용
             companies_df = load_companies()
@@ -247,8 +247,8 @@ def load_recommendations(company_id: int = None) -> pd.DataFrame:
             if not company_data.empty and 'company_name' in company_data.columns:
                 company_name = company_data.iloc[0]['company_name']
                 
-                # 기업명으로 recommend2에서 검색
-                query = supabase.table('recommend2').select('*').ilike('기업명', f'%{company_name}%')
+                # 기업명으로 recommend3에서 검색
+                query = supabase.table('recommend3').select('*').ilike('company_name', f'%{company_name}%')
             else:
                 # alpha_companies2의 경우 원본 ID 사용
                 if company_id < 0:
@@ -256,7 +256,7 @@ def load_recommendations(company_id: int = None) -> pd.DataFrame:
                     company_result = supabase.table('alpha_companies2').select('"기업명"').eq('"No."', original_id).execute()
                     if company_result.data:
                         company_name = company_result.data[0]['기업명']
-                        query = supabase.table('recommend2').select('*').ilike('기업명', f'%{company_name}%')
+                        query = supabase.table('recommend3').select('*').ilike('company_name', f'%{company_name}%')
                     else:
                         return pd.DataFrame()
                 else:
@@ -264,7 +264,7 @@ def load_recommendations(company_id: int = None) -> pd.DataFrame:
                     company_result = supabase.table('companies').select('name').eq('id', company_id).execute()
                     if company_result.data:
                         company_name = company_result.data[0]['name']
-                        query = supabase.table('recommend2').select('*').ilike('기업명', f'%{company_name}%')
+                        query = supabase.table('recommend3').select('*').ilike('company_name', f'%{company_name}%')
                     else:
                         return pd.DataFrame()
         result = query.execute()
@@ -275,10 +275,10 @@ def load_recommendations(company_id: int = None) -> pd.DataFrame:
 
 @st.cache_data(ttl=60)
 def load_recommendations2(company_id: int = None) -> pd.DataFrame:
-    """추천 데이터 로드 (recommend2 테이블) - URL 정보 포함"""
+    """추천 데이터 로드 (recommend3 테이블) - URL 정보 포함"""
     try:
         
-        query = supabase.table('recommend2').select('*')
+        query = supabase.table('recommend3').select('*')
         
         # company_id가 있는 경우, 기업명으로 검색
         if company_id:
@@ -289,8 +289,8 @@ def load_recommendations2(company_id: int = None) -> pd.DataFrame:
             if not company_data.empty and 'company_name' in company_data.columns:
                 company_name = company_data.iloc[0]['company_name']
                 
-                # 기업명으로 recommend2에서 검색
-                query = supabase.table('recommend2').select('*').ilike('기업명', f'%{company_name}%')
+                # 기업명으로 recommend3에서 검색
+                query = supabase.table('recommend3').select('*').ilike('company_name', f'%{company_name}%')
             else:
                 # alpha_companies2의 경우 원본 ID 사용
                 if company_id < 0:
@@ -298,7 +298,7 @@ def load_recommendations2(company_id: int = None) -> pd.DataFrame:
                     company_result = supabase.table('alpha_companies2').select('"기업명"').eq('"No."', original_id).execute()
                     if company_result.data:
                         company_name = company_result.data[0]['기업명']
-                        query = supabase.table('recommend2').select('*').ilike('기업명', f'%{company_name}%')
+                        query = supabase.table('recommend3').select('*').ilike('company_name', f'%{company_name}%')
                     else:
                         st.warning(f"회사 ID {company_id}에 대한 기업명을 찾을 수 없습니다.")
                         query = supabase.table('recommend2').select('*')
@@ -307,7 +307,7 @@ def load_recommendations2(company_id: int = None) -> pd.DataFrame:
                     company_result = supabase.table('companies').select('name').eq('id', company_id).execute()
                     if company_result.data:
                         company_name = company_result.data[0]['name']
-                        query = supabase.table('recommend2').select('*').ilike('기업명', f'%{company_name}%')
+                        query = supabase.table('recommend3').select('*').ilike('company_name', f'%{company_name}%')
                     else:
                         st.warning(f"회사 ID {company_id}에 대한 기업명을 찾을 수 없습니다.")
                         query = supabase.table('recommend2').select('*')
@@ -318,39 +318,40 @@ def load_recommendations2(company_id: int = None) -> pd.DataFrame:
         # company_id가 있고 데이터가 있으면 필터링
         if company_id and not df.empty and company_name:
             # 기업명으로 필터링 (클라이언트 사이드)
-            if '기업명' in df.columns:
+            if 'company_name' in df.columns:
                 # 정확한 매칭 시도
-                exact_match = df[df['기업명'] == company_name]
+                exact_match = df[df['company_name'] == company_name]
                 if not exact_match.empty:
                     df = exact_match
                     st.success(f"✅ 정확한 매칭 발견: {len(exact_match)}개 추천")
                 else:
                     # 부분 매칭 시도
-                    partial_match = df[df['기업명'].str.contains(company_name, case=False, na=False)]
+                    partial_match = df[df['company_name'].str.contains(company_name, case=False, na=False)]
                     if not partial_match.empty:
                         df = partial_match
                         st.warning(f"⚠️ 부분 매칭 발견: {len(partial_match)}개 추천")
                     else:
                         st.warning(f"❌ 매칭되는 추천이 없습니다. 검색 기업명: {company_name}")
-                        # 디버깅을 위해 recommend2의 기업명 샘플 표시
-                        sample_companies = df['기업명'].unique()[:5]
-                        st.info(f"📋 recommend2 테이블 기업명 샘플: {list(sample_companies)}")
-            elif 'company_name' in df.columns:
-                df = df[df['company_name'].str.contains(company_name, case=False, na=False)]
+                        # 디버깅을 위해 recommend3의 기업명 샘플 표시
+                        sample_companies = df['company_name'].unique()[:5]
+                        st.info(f"📋 recommend3 테이블 기업명 샘플: {list(sample_companies)}")
+            elif '기업명' in df.columns:
+                df = df[df['기업명'].str.contains(company_name, case=False, na=False)]
         
-        # 컬럼명을 한국어로 매핑 (기존 컬럼명에 맞게)
+        # 컬럼명을 한국어로 매핑 (recommend3 테이블에 맞게)
         if not df.empty:
-            # 기존 recommend2 테이블의 컬럼명에 맞게 매핑
+            # recommend3 테이블의 컬럼명에 맞게 매핑
             column_mapping = {
-                '기업명': '회사명',
-                '공고명': '공고제목',
-                '공고출처': '공고출처',
-                '총점수': '총점수',
-                '매칭이유': '매칭이유',
-                '접수시작일': '접수시작일',
-                '접수마감일': '접수마감일',
-                'URL': '공고보기',
-                '공고상세정보': '공고상세정보'
+                'company_name': '회사명',
+                'title_y': '공고제목',
+                'source': '공고출처',
+                'final_score': '총점수',
+                'final_level': '적합도',
+                'description': '매칭이유',
+                'apply_start_y': '접수시작일',
+                'apply_end_y': '접수마감일',
+                'url': '공고보기',
+                'doc_text': '공고상세정보'
             }
             
             # 존재하는 컬럼만 매핑
@@ -365,14 +366,14 @@ def load_recommendations2(company_id: int = None) -> pd.DataFrame:
                 # 세션 상태에서 상태 정보 가져오기
                 if 'recommendation_status' in st.session_state:
                     for idx, row in df.iterrows():
-                        company_name = row.get('기업명', '')
-                        announcement_title = row.get('공고제목', '')
+                        company_name = row.get('company_name', '')
+                        announcement_title = row.get('title_y', '')
                         if company_name and announcement_title:
                             key = f"{company_name}_{announcement_title}"
                             if key in st.session_state['recommendation_status']:
                                 df.at[idx, 'status'] = st.session_state['recommendation_status'][key]
             
-            # 지원가능여부 컬럼 추가
+            # 지원가능여부 컬럼 추가 (매핑 후 컬럼명 사용)
             if '접수시작일' in df.columns and '접수마감일' in df.columns:
                 df['지원가능여부'] = df.apply(
                     lambda row: calculate_support_status(row['접수시작일'], row['접수마감일']), 
@@ -401,11 +402,11 @@ def update_recommendation_status(company_name, announcement_title, status):
         
         # 데이터베이스에도 업데이트 시도 (status 컬럼이 있는 경우)
         try:
-            result = supabase.table('recommend2').select('*').eq('기업명', company_name).eq('공고제목', announcement_title).execute()
+            result = supabase.table('recommend3').select('*').eq('company_name', company_name).eq('title_y', announcement_title).execute()
             
             if result.data and 'status' in result.data[0]:
                 update_data = {'status': status}
-                supabase.table('recommend2').update(update_data).eq('기업명', company_name).eq('공고제목', announcement_title).execute()
+                supabase.table('recommend3').update(update_data).eq('company_name', company_name).eq('title_y', announcement_title).execute()
         except:
             pass
         
@@ -429,7 +430,7 @@ def get_recommendation_status(company_name, announcement_title):
     # 세션 상태에 없으면 데이터베이스에서 확인
     if supabase is not None:
         try:
-            result = supabase.table('recommend2').select('status').eq('기업명', company_name).eq('공고제목', announcement_title).execute()
+            result = supabase.table('recommend3').select('status').eq('company_name', company_name).eq('title_y', announcement_title).execute()
             
             if result.data and len(result.data) > 0:
                 status = result.data[0].get('status', 'pending')
@@ -441,12 +442,12 @@ def get_recommendation_status(company_name, announcement_title):
     
     return 'pending'
 
-def create_recommend2_table():
-    """recommend2 테이블 생성"""
+def create_recommend3_table():
+    """recommend3 테이블 생성"""
     try:
-        # recommend2 테이블 생성 SQL
+        # recommend3 테이블 생성 SQL
         create_table_sql = """
-        CREATE TABLE IF NOT EXISTS recommend2 (
+        CREATE TABLE IF NOT EXISTS recommend3 (
             id SERIAL PRIMARY KEY,
             company_id INTEGER,
             company_name VARCHAR(255),
@@ -465,26 +466,340 @@ def create_recommend2_table():
         
         # 테이블 생성 실행
         result = supabase.rpc('exec_sql', {'sql': create_table_sql}).execute()
-        st.info("✅ recommend2 테이블이 생성되었습니다.")
+        st.info("✅ recommend3 테이블이 생성되었습니다.")
         
         # 인덱스 생성
         index_sql = """
-        CREATE INDEX IF NOT EXISTS idx_recommend2_company_id ON recommend2(company_id);
-        CREATE INDEX IF NOT EXISTS idx_recommend2_company_name ON recommend2(company_name);
-        CREATE INDEX IF NOT EXISTS idx_recommend2_total_score ON recommend2(total_score);
+        CREATE INDEX IF NOT EXISTS idx_recommend3_company_id ON recommend3(company_id);
+        CREATE INDEX IF NOT EXISTS idx_recommend3_company_name ON recommend3(company_name);
+        CREATE INDEX IF NOT EXISTS idx_recommend3_total_score ON recommend3(total_score);
         """
         
         supabase.rpc('exec_sql', {'sql': index_sql}).execute()
         
     except Exception as e:
-        st.warning(f"recommend2 테이블 생성 중 오류: {e}")
+        st.warning(f"recommend3 테이블 생성 중 오류: {e}")
         # 테이블이 이미 존재하는 경우 무시
+
+def load_recommendations_region4(company_id: int = None) -> pd.DataFrame:
+    """지역별 추천 데이터 로드 (recommend_region4 테이블)"""
+    try:
+        query = supabase.table('recommend_region4').select('*')
+        if company_id:
+            # alpha_companies2 테이블에서 기업명 찾기
+            company_name = None
+            try:
+                # company_id가 음수인 경우 (alpha_companies2에서 온 경우)
+                if company_id < 0:
+                    original_id = -company_id
+                    alpha_result = supabase.table('alpha_companies2').select('"기업명"').eq('"No."', original_id).execute()
+                else:
+                    # company_id가 양수인 경우 (companies 테이블에서 온 경우)
+                    alpha_result = supabase.table('alpha_companies2').select('"기업명"').eq('"No."', company_id).execute()
+                
+                if alpha_result.data:
+                    company_name = alpha_result.data[0]['기업명']
+            except:
+                pass
+            
+            if company_name:
+                # 기업명으로 recommend_region4에서 부분 매칭 (ilike 사용)
+                query = supabase.table('recommend_region4').select('*').ilike('company_name', f'%{company_name}%')
+        
+        result = query.execute()
+        df = pd.DataFrame(result.data)
+        
+        # 컬럼명을 한국어로 매핑 (recommend_region4 테이블에 맞게)
+        if not df.empty:
+            column_mapping = {
+                'company_name': '회사명',
+                'company_province': '회사지역',
+                'program_id': '프로그램ID',
+                'url': '공고보기',
+                'final_score': '총점수',
+                'final_score_10': '총점수(10점만점)',
+                'final_level': '적합도',
+                'program_provinces': '프로그램지역',
+                'region_match': '지역매칭',
+                'source': '공고출처',
+                'base_score': '기본점수',
+                'sim_raw': '유사도(원본)',
+                'sim_points': '유사도점수',
+                'priority_boost_points': '우선순위보너스',
+                'base_score_10': '기본점수(10점만점)',
+                'score_stage': '단계점수',
+                'score_industry': '업종점수',
+                'score_region': '지역점수',
+                'score_timing': '시기점수',
+                'score_bonus': '보너스점수',
+                'score_penalty': '감점',
+                'priority_type_x': '우선순위유형',
+                'title_x': '공고제목',
+                'sim': '유사도',
+                'apply_start_x': '접수시작일',
+                'apply_end_x': '접수마감일',
+                'region': '지역',
+                'years': '업력',
+                'raw_text': '원본텍스트',
+                'industry_primary': '주요업종',
+                'title_y': '프로그램제목',
+                'description': '프로그램설명',
+                'category': '카테고리',
+                'doc_text': '문서텍스트',
+                'program_region': '프로그램지역',
+                'priority_type_y': '우선순위유형2',
+                'apply_start_y': '접수시작일2',
+                'apply_end_y': '접수마감일2',
+                'base_score_recomputed': '재계산기본점수',
+                'region_prog': '프로그램지역2',
+                'title_prog': '프로그램제목2',
+                'description_prog': '프로그램설명2',
+                'category_prog': '카테고리2',
+                'doc_text_prog': '문서텍스트2'
+            }
+            
+            # 존재하는 컬럼만 매핑
+            existing_columns = df.columns.tolist()
+            mapping_to_apply = {k: v for k, v in column_mapping.items() if k in existing_columns}
+            df = df.rename(columns=mapping_to_apply)
+        
+        # 지원가능여부 컬럼 추가
+        if not df.empty and '접수시작일' in df.columns and '접수마감일' in df.columns:
+            df['지원가능여부'] = df.apply(
+                lambda row: calculate_support_status(row['접수시작일'], row['접수마감일']), 
+                axis=1
+            )
+        
+        return df
+    except Exception as e:
+        st.error(f"지역별 추천 데이터 로드 실패 (recommend_region4): {e}")
+        return pd.DataFrame()
+
+def load_recommendations_rules4(company_id: int = None) -> pd.DataFrame:
+    """규칙별 추천 데이터 로드 (recommend_rules4 테이블)"""
+    try:
+        query = supabase.table('recommend_rules4').select('*')
+        if company_id:
+            # alpha_companies2 테이블에서 기업명 찾기
+            company_name = None
+            try:
+                # company_id가 음수인 경우 (alpha_companies2에서 온 경우)
+                if company_id < 0:
+                    original_id = -company_id
+                    alpha_result = supabase.table('alpha_companies2').select('"기업명"').eq('"No."', original_id).execute()
+                else:
+                    # company_id가 양수인 경우 (companies 테이블에서 온 경우)
+                    alpha_result = supabase.table('alpha_companies2').select('"기업명"').eq('"No."', company_id).execute()
+                
+                if alpha_result.data:
+                    company_name = alpha_result.data[0]['기업명']
+            except Exception as e:
+                pass
+            
+            if company_name:
+                # 기업명으로 recommend_rules4에서 부분 매칭 (ilike 사용)
+                query = supabase.table('recommend_rules4').select('*').ilike('company_name', f'%{company_name}%')
+        
+        result = query.execute()
+        df = pd.DataFrame(result.data)
+        
+        # 컬럼명을 한국어로 매핑 (recommend_rules4 테이블의 실제 컬럼명에 맞게)
+        if not df.empty:
+            column_mapping = {
+                'company_id': '회사ID',
+                'company_name': '회사명',
+                'company_province': '회사지역',
+                'company_years': '회사업력',
+                'company_section': '회사업종',
+                'program_id': '프로그램ID',
+                'priority_type': '우선순위유형',
+                'title': '공고제목',
+                'url': '공고보기',
+                'apply_start': '접수시작일',
+                'apply_end': '접수마감일',
+                'program_provinces': '프로그램지역',
+                'program_years_min': '최소업력',
+                'program_years_max': '최대업력',
+                'program_section': '프로그램업종',
+                'passed': '통과여부',
+                'reason': '통과이유'
+            }
+            
+            # 존재하는 컬럼만 매핑
+            existing_columns = df.columns.tolist()
+            mapping_to_apply = {k: v for k, v in column_mapping.items() if k in existing_columns}
+            df = df.rename(columns=mapping_to_apply)
+        
+        # 지원가능여부 컬럼 추가
+        if not df.empty and '접수시작일' in df.columns and '접수마감일' in df.columns:
+            df['지원가능여부'] = df.apply(
+                lambda row: calculate_support_status(row['접수시작일'], row['접수마감일']), 
+                axis=1
+            )
+        
+        return df
+    except Exception as e:
+        st.error(f"규칙별 추천 데이터 로드 실패 (recommend_rules4): {e}")
+        return pd.DataFrame()
+
+def load_recommendations_priority4(company_id: int = None) -> pd.DataFrame:
+    """3대장별 추천 데이터 로드 (recommend_priority4 테이블)"""
+    try:
+        query = supabase.table('recommend_priority4').select('*')
+        if company_id:
+            # alpha_companies2 테이블에서 기업명 찾기
+            company_name = None
+            try:
+                # company_id가 음수인 경우 (alpha_companies2에서 온 경우)
+                if company_id < 0:
+                    original_id = -company_id
+                    alpha_result = supabase.table('alpha_companies2').select('"기업명"').eq('"No."', original_id).execute()
+                else:
+                    # company_id가 양수인 경우 (companies 테이블에서 온 경우)
+                    alpha_result = supabase.table('alpha_companies2').select('"기업명"').eq('"No."', company_id).execute()
+                
+                if alpha_result.data:
+                    company_name = alpha_result.data[0]['기업명']
+            except:
+                pass
+            
+            if company_name:
+                # 기업명으로 recommend_priority4에서 부분 매칭 (ilike 사용)
+                query = supabase.table('recommend_priority4').select('*').ilike('company_name', f'%{company_name}%')
+        
+        result = query.execute()
+        df = pd.DataFrame(result.data)
+        
+        # 컬럼명을 한국어로 매핑 (recommend_priority4 테이블의 실제 컬럼명에 맞게)
+        if not df.empty:
+            column_mapping = {
+                'company_id': '회사ID',
+                'company_name': '회사명',
+                'program_id': '프로그램ID',
+                'source': '공고출처',
+                'final_score': '총점수',
+                'base_score': '기본점수',
+                'sim_raw': '유사도(원본)',
+                'sim_points': '유사도점수',
+                'priority_boost_points': '우선순위보너스',
+                'final_score_10': '총점수(10점만점)',
+                'base_score_10': '기본점수(10점만점)',
+                'final_level': '적합도',
+                'score_stage': '단계점수',
+                'score_industry': '업종점수',
+                'score_region': '지역점수',
+                'score_timing': '시기점수',
+                'score_bonus': '보너스점수',
+                'score_penalty': '감점',
+                'url': '공고보기',
+                'priority_type_x': '우선순위유형',
+                'title_x': '공고제목',
+                'sim': '유사도',
+                'apply_start_x': '접수시작일',
+                'apply_end_x': '접수마감일',
+                'region': '지역',
+                'years': '업력',
+                'raw_text': '원본텍스트',
+                'industry_primary': '주요업종',
+                'title_y': '프로그램제목',
+                'description': '프로그램설명',
+                'category': '카테고리',
+                'doc_text': '문서텍스트',
+                'program_region': '프로그램지역',
+                'priority_type_y': '우선순위유형2',
+                'apply_start_y': '접수시작일2',
+                'apply_end_y': '접수마감일2',
+                'base_score_recomputed': '재계산기본점수'
+            }
+            
+            # 존재하는 컬럼만 매핑
+            existing_columns = df.columns.tolist()
+            mapping_to_apply = {k: v for k, v in column_mapping.items() if k in existing_columns}
+            df = df.rename(columns=mapping_to_apply)
+        
+        # 지원가능여부 컬럼 추가
+        if not df.empty and '접수시작일' in df.columns and '접수마감일' in df.columns:
+            df['지원가능여부'] = df.apply(
+                lambda row: calculate_support_status(row['접수시작일'], row['접수마감일']), 
+                axis=1
+            )
+        
+        return df
+    except Exception as e:
+        st.error(f"3대장별 추천 데이터 로드 실패 (recommend_priority4): {e}")
+        return pd.DataFrame()
+
+def load_recommendations_keyword4(company_id: int = None) -> pd.DataFrame:
+    """키워드별 추천 데이터 로드 (recommend_keyword4 테이블)"""
+    try:
+        query = supabase.table('recommend_keyword4').select('*')
+        if company_id:
+            # alpha_companies2 테이블에서 기업명 찾기
+            company_name = None
+            try:
+                # company_id가 음수인 경우 (alpha_companies2에서 온 경우)
+                if company_id < 0:
+                    original_id = -company_id
+                    alpha_result = supabase.table('alpha_companies2').select('"기업명"').eq('"No."', original_id).execute()
+                else:
+                    # company_id가 양수인 경우 (companies 테이블에서 온 경우)
+                    alpha_result = supabase.table('alpha_companies2').select('"기업명"').eq('"No."', company_id).execute()
+                
+                if alpha_result.data:
+                    company_name = alpha_result.data[0]['기업명']
+            except:
+                pass
+            
+            if company_name:
+                # 기업명으로 recommend_keyword4에서 부분 매칭 (ilike 사용)
+                query = supabase.table('recommend_keyword4').select('*').ilike('company_name', f'%{company_name}%')
+        
+        result = query.execute()
+        df = pd.DataFrame(result.data)
+        
+        # 컬럼명을 한국어로 매핑 (recommend_keyword4 테이블의 실제 컬럼명에 맞게)
+        if not df.empty:
+            column_mapping = {
+                'company_name': '회사명',
+                'program_id': '프로그램ID',
+                'url': '공고보기',
+                'title': '공고제목',
+                'priority_type': '우선순위유형',
+                'apply_start': '접수시작일',
+                'apply_end': '접수마감일',
+                'kw_intersection': '키워드교집합',
+                'kw_tfidf': '키워드TF-IDF',
+                'kw_bm25': '키워드BM25',
+                'kw_phrase_hit': '키워드구문매칭',
+                'kw_must_have_hits': '필수키워드매칭',
+                'kw_forbid_hit': '금지키워드매칭',
+                'kw_gate': '키워드게이트',
+                'kw_reason': '키워드매칭이유',
+                'keyword_points': '키워드점수'
+            }
+            
+            # 존재하는 컬럼만 매핑
+            existing_columns = df.columns.tolist()
+            mapping_to_apply = {k: v for k, v in column_mapping.items() if k in existing_columns}
+            df = df.rename(columns=mapping_to_apply)
+        
+        # 지원가능여부 컬럼 추가
+        if not df.empty and '접수시작일' in df.columns and '접수마감일' in df.columns:
+            df['지원가능여부'] = df.apply(
+                lambda row: calculate_support_status(row['접수시작일'], row['접수마감일']), 
+                axis=1
+            )
+        
+        return df
+    except Exception as e:
+        st.error(f"키워드별 추천 데이터 로드 실패 (recommend_keyword4): {e}")
+        return pd.DataFrame()
 
 @st.cache_data(ttl=60)
 def load_recommendations3_active(company_id: int = None) -> pd.DataFrame:
-    """활성 추천 데이터 로드 (recommend_active2 테이블) - URL 정보 포함"""
+    """활성 추천 데이터 로드 (recommend_active3 테이블) - URL 정보 포함"""
     try:
-        query = supabase.table('recommend_active2').select('*')
+        query = supabase.table('recommend_active3').select('*')
         if company_id:
             # 회사의 기업명으로 직접 매칭
             company_name = None
@@ -507,14 +822,27 @@ def load_recommendations3_active(company_id: int = None) -> pd.DataFrame:
                     pass
             
             if company_name:
-                # 기업명으로 recommend_active2에서 검색
-                query = supabase.table('recommend_active2').select('*').ilike('기업명', f'%{company_name}%')
+                # 기업명으로 recommend_active3에서 검색
+                query = supabase.table('recommend_active3').select('*').ilike('company_name', f'%{company_name}%')
         result = query.execute()
         df = pd.DataFrame(result.data)
         
-        # URL 컬럼명을 '공고보기'로 변경 (recommend_active2에 이미 URL 컬럼이 있음)
-        if not df.empty and 'URL' in df.columns:
-            df = df.rename(columns={'URL': '공고보기'})
+        # 컬럼명을 한국어로 매핑 (recommend_active3 테이블에 맞게)
+        if not df.empty:
+            column_mapping = {
+                'company_name': '회사명',
+                'title': '공고제목',
+                'source': '공고출처',
+                'final_score': '총점수',
+                'url': '공고보기',
+                'apply_start': '접수시작일',
+                'apply_end': '접수마감일'
+            }
+            
+            # 존재하는 컬럼만 매핑
+            existing_columns = df.columns.tolist()
+            mapping_to_apply = {k: v for k, v in column_mapping.items() if k in existing_columns}
+            df = df.rename(columns=mapping_to_apply)
         
         # 지원가능여부 컬럼 추가
         if not df.empty and '접수시작일' in df.columns and '접수마감일' in df.columns:
@@ -525,7 +853,7 @@ def load_recommendations3_active(company_id: int = None) -> pd.DataFrame:
         
         return df
     except Exception as e:
-        st.error(f"활성 추천 데이터 로드 실패 (recommend_active2): {e}")
+        st.error(f"활성 추천 데이터 로드 실패 (recommend_active3): {e}")
         return pd.DataFrame()
 
 def save_company(company_data: Dict) -> bool:
@@ -584,7 +912,7 @@ def enhanced_save_company_with_recommendations(company_data: Dict) -> bool:
         recommendations = generate_company_recommendations(company_data, company_id)
         
         if recommendations:
-            # 3. 추천 결과를 recommend2 테이블에 저장
+            # 3. 추천 결과를 recommend3 테이블에 저장
             save_recommendations_to_supabase(company_id, recommendations)
             
             # 4. 알림 상태 초기화
@@ -776,9 +1104,9 @@ def save_recommendations_to_supabase(company_id: int, recommendations: List[Dict
     try:
         for rec in recommendations:
             rec['company_id'] = company_id
-            supabase.table('recommend2').insert(rec).execute()
+            supabase.table('recommend3').insert(rec).execute()
         
-        st.info(f"📊 {len(recommendations)}개 추천이 recommend2 테이블에 저장되었습니다.")
+        st.info(f"📊 {len(recommendations)}개 추천이 recommend3 테이블에 저장되었습니다.")
         
     except Exception as e:
         st.error(f"추천 저장 실패: {e}")
@@ -807,10 +1135,17 @@ def delete_company(company_id: int) -> bool:
         st.error(f"회사 삭제 실패: {e}")
         return False
 
+@st.cache_data(ttl=300)  # 5분 캐싱
 def load_notifications(company_id: int) -> List[str]:
     """알림 상태 로드"""
     try:
-        # alpha_companies2의 No.와 notification_states의 company_id 매칭
+        # alpha_companies2의 음수 ID는 세션 상태에서 로드
+        if company_id < 0:
+            if 'notification_states' in st.session_state and company_id in st.session_state['notification_states']:
+                return st.session_state['notification_states'][company_id].get('last_seen_announcement_ids', [])
+            return []
+        
+        # 양수 ID는 데이터베이스에서 로드
         result = supabase.table('notification_states').select('last_seen_announcement_ids').eq('company_id', company_id).execute()
         if result.data:
             return result.data[0]['last_seen_announcement_ids'] or []
@@ -822,6 +1157,19 @@ def load_notifications(company_id: int) -> List[str]:
 def save_notifications(company_id: int, announcement_ids: List[str]) -> bool:
     """알림 상태 저장"""
     try:
+        # alpha_companies2의 음수 ID는 notification_states 테이블에 저장하지 않음
+        if company_id < 0:
+            # 음수 ID는 세션 상태로만 관리
+            if 'notification_states' not in st.session_state:
+                st.session_state['notification_states'] = {}
+            
+            st.session_state['notification_states'][company_id] = {
+                'last_seen_announcement_ids': announcement_ids,
+                'last_updated': datetime.now().isoformat()
+            }
+            return True
+        
+        # 양수 ID만 데이터베이스에 저장
         # 기존 레코드 확인
         existing = supabase.table('notification_states').select('id').eq('company_id', company_id).execute()
         
@@ -977,7 +1325,7 @@ def render_sidebar():
 
 
 def render_alerts_tab():
-    """신규 공고 알림 탭 렌더링 (recommendations2 테이블 사용)"""
+    """신규 공고 알림 탭 렌더링 (recommendations3 테이블 사용)"""
     if 'selected_company' not in st.session_state:
         st.info("사이드바에서 회사를 선택해주세요.")
         return
@@ -986,82 +1334,252 @@ def render_alerts_tab():
     display_name = company.get('company_name', company.get('name', 'Unknown'))
     st.subheader(f"🔔 {display_name} 신규 공고 알림")
     
+    # 회사가 바뀌면 확인 상태 초기화
+    if 'last_selected_company' not in st.session_state:
+        st.session_state['last_selected_company'] = company['id']
+    elif st.session_state['last_selected_company'] != company['id']:
+        st.session_state['notifications_processed'] = False
+        st.session_state['last_selected_company'] = company['id']
+        # 개별 확인 상태도 초기화
+        st.session_state['individual_seen_announcements'] = []
+    
     # 알림 상태 로드
     last_seen_ids = load_notifications(company['id'])
     
-    # 활성 추천 데이터 로드 (recommend2 테이블 사용)
+    # 활성 추천 데이터 로드 (recommend3 테이블 사용) - 캐싱된 데이터 사용
     recommendations2_df = load_recommendations2(company['id'])
     
-    # 중복 제거: 공고명별로 가장 높은 총점수를 가진 레코드만 유지
-    if not recommendations2_df.empty and '공고제목' in recommendations2_df.columns and '총점수' in recommendations2_df.columns:
-        recommendations2_df = recommendations2_df.sort_values('총점수', ascending=False).drop_duplicates(subset=['공고제목'], keep='first')
-        recommendations2_df = recommendations2_df.sort_values('총점수', ascending=False)
-    
     if not recommendations2_df.empty:
-        # 활성 공고만 필터링 (마감일 기준)
+        # 중복 제거: 공고명별로 가장 높은 총점수를 가진 레코드만 유지
+        if '공고제목' in recommendations2_df.columns and '총점수' in recommendations2_df.columns:
+            recommendations2_df = recommendations2_df.sort_values('총점수', ascending=False).drop_duplicates(subset=['공고제목'], keep='first')
+            recommendations2_df = recommendations2_df.sort_values('총점수', ascending=False)
+        
+        # 활성 공고만 필터링 (마감일 기준) - 최적화된 필터링
         today = date.today()
-        active_recommendations = recommendations2_df[
-            (recommendations2_df['접수마감일'] >= today.strftime('%Y-%m-%d')) |
-            (recommendations2_df['접수마감일'].isna())
-        ]
+        today_str = today.strftime('%Y-%m-%d')
+        
+        # 접수마감일이 있는 경우만 필터링
+        if '접수마감일' in recommendations2_df.columns:
+            active_recommendations = recommendations2_df[
+                (recommendations2_df['접수마감일'] >= today_str) |
+                (recommendations2_df['접수마감일'].isna())
+            ]
+        else:
+            active_recommendations = recommendations2_df
         
         if not active_recommendations.empty:
-            # 신규 공고 필터링 (공고이름 기준으로 비교)
-            # recommendations2에서는 공고 ID가 없으므로 공고이름으로 비교
+            # 확인 처리된 공고 필터링
             last_seen_names = []
             if last_seen_ids:
-                # 기존 알림 상태에서 공고 이름들을 가져와야 함
-                # 이 부분은 간단히 모든 공고를 신규로 표시하도록 수정
-                pass
+                # 기존 알림 상태에서 공고 이름들을 가져옴
+                last_seen_names = last_seen_ids
             
-            # 일단 모든 활성 공고를 신규로 표시 (실제 구현에서는 더 정교한 로직 필요)
-            new_announcements = active_recommendations
+            # 개별 확인된 공고도 추가
+            individual_seen = st.session_state.get('individual_seen_announcements', [])
+            for name in individual_seen:
+                if name not in last_seen_names:
+                    last_seen_names.append(name)
             
-            if not new_announcements.empty:
-                st.success(f"🆕 {len(new_announcements)}개의 활성 공고가 있습니다!")
-                
-                # recommend2 테이블의 컬럼을 직접 사용 (공고보기 링크 추가, 순서 조정)
-                display_columns = ['총점수', '공고제목', '공고보기', '접수시작일', '접수마감일', '지역', '기관명', '매칭이유']
-                available_columns = [col for col in display_columns if col in new_announcements.columns]
-                
-                # 데이터 타입 정리
-                display_df = new_announcements[available_columns].copy()
-                for col in display_df.columns:
-                    if display_df[col].dtype == 'object':
-                        display_df[col] = display_df[col].astype(str)
-                
-                st.dataframe(
-                    display_df,
-                    width='stretch',
-                    column_config={
-                        "매칭이유": st.column_config.TextColumn("매칭 이유", width="large"),
-                        "공고제목": st.column_config.TextColumn("공고명", width="large"),
-                        "공고보기": st.column_config.LinkColumn("공고보기", width="medium", display_text="공고 보기"),
-                        "접수시작일": st.column_config.DateColumn("접수시작일", width="small"),
-                        "접수마감일": st.column_config.DateColumn("접수마감일", width="small"),
-                        "지역": st.column_config.TextColumn("지역", width="small"),
-                        "기관명": st.column_config.TextColumn("기관명", width="medium"),
-                        "총점수": st.column_config.NumberColumn("점수", format="%.0f", width="small")
-                    }
-                )
-                
-                # 모두 확인 처리 버튼
-                if st.button("모두 확인 처리", type="primary"):
-                    # 현재 활성 추천들의 공고제목을 스냅샷에 저장
-                    current_names = active_recommendations['공고제목'].tolist()
-                    
-                    if save_notifications(company['id'], current_names):
-                        st.success("모든 공고를 확인 처리했습니다!")
-                        st.rerun()
+            # 확인 처리되지 않은 공고만 필터링
+            if last_seen_names:
+                # 공고제목이 last_seen_names에 없는 것만 선택
+                new_announcements = active_recommendations[
+                    ~active_recommendations['공고제목'].isin(last_seen_names)
+                ]
             else:
-                st.info("신규 공고가 없습니다.")
+                # 확인 처리된 공고가 없으면 모든 활성 공고를 신규로 표시
+                new_announcements = active_recommendations
+            
+            # 확인 처리 버튼이 눌렸는지 확인
+            if 'notifications_processed' not in st.session_state:
+                st.session_state['notifications_processed'] = False
+            
+            # 숨김 처리된 공고들 표시 (상단)
+            if last_seen_names:
+                with st.expander(f"📋 숨김 처리된 공고 ({len(last_seen_names)}개)", expanded=False):
+                    # 숨김 처리된 공고들을 원본 데이터에서 찾아서 표시
+                    hidden_announcements = active_recommendations[
+                        active_recommendations['공고제목'].isin(last_seen_names)
+                    ]
+                    
+                    if not hidden_announcements.empty:
+                        for idx, row in hidden_announcements.iterrows():
+                            with st.container():
+                                col1, col2, col3 = st.columns([3, 1, 1])
+                                
+                                with col1:
+                                    st.write(f"~~{row.get('공고제목', 'N/A')}~~")  # 취소선으로 표시
+                                    if '기관명' in row and pd.notna(row['기관명']):
+                                        st.caption(f"📋 {row['기관명']}")
+                                    if '매칭이유' in row and pd.notna(row['매칭이유']):
+                                        st.caption(f"💡 {row['매칭이유']}")
+                                
+                                with col2:
+                                    if '총점수' in row and pd.notna(row['총점수']):
+                                        st.metric("점수", f"{row['총점수']:.0f}")
+                                    if '적합도' in row and pd.notna(row['적합도']):
+                                        st.caption(f"적합도: {row['적합도']}")
+                                
+                                with col3:
+                                    if '접수마감일' in row and pd.notna(row['접수마감일']):
+                                        st.caption(f"마감: {row['접수마감일']}")
+                                    if '공고보기' in row and pd.notna(row['공고보기']):
+                                        st.link_button("공고보기", row['공고보기'])
+                                
+                                st.divider()
+                    
+                    # 새로고침 버튼
+                    col1, col2, col3 = st.columns([1, 2, 1])
+                    with col2:
+                        if st.button("🔄 새로고침", use_container_width=True):
+                            # 모든 확인 상태 초기화
+                            st.session_state['notifications_processed'] = False
+                            st.session_state['individual_seen_announcements'] = []
+                            # 개별 공고 확인 상태도 초기화
+                            for key in list(st.session_state.keys()):
+                                if key.startswith(f"announcement_{company['id']}_"):
+                                    del st.session_state[key]
+                            st.rerun()
+                
+                st.markdown("---")
+            
+            # 신규 공고가 있는 경우
+            if not new_announcements.empty:
+                # 상단 헤더 영역 - 공고 개수와 버튼을 같은 줄에 배치
+                col1, col2 = st.columns([3, 1])
+                
+                with col1:
+                    st.success(f"🆕 {len(new_announcements)}개의 신규 공고가 있습니다!")
+                
+                with col2:
+                    # 모두 확인 처리 버튼 - 상단 오른쪽 고정
+                    if st.button("✅ 모두 확인 처리", type="primary", use_container_width=True):
+                        # 현재 신규 공고들의 공고제목을 스냅샷에 저장
+                        current_names = new_announcements['공고제목'].tolist()
+                        
+                        # 기존 개별 확인된 공고와 합치기
+                        individual_seen = st.session_state.get('individual_seen_announcements', [])
+                        all_names = list(set(current_names + individual_seen))
+                        
+                        if save_notifications(company['id'], all_names):
+                            # 모든 공고를 개별 확인 상태로 설정
+                            for name in current_names:
+                                announcement_key = f"announcement_{company['id']}_{name}"
+                                st.session_state[announcement_key] = True
+                            
+                            # 개별 확인 목록 업데이트
+                            st.session_state['individual_seen_announcements'] = all_names
+                            
+                            st.rerun()
+                        else:
+                            st.error("❌ 확인 처리에 실패했습니다.")
+                
+                # 구분선
+                st.markdown("---")
+                
+                # 스크롤 가능한 공고 목록 영역
+                st.markdown("""
+                <style>
+                .scrollable-container {
+                    max-height: 60vh;
+                    overflow-y: auto;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                    padding: 1rem;
+                    background-color: #fafafa;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                # 공고 목록을 스크롤 가능한 컨테이너로 감싸기
+                with st.container():
+                    st.markdown('<div class="scrollable-container">', unsafe_allow_html=True)
+                    
+                    # 공고 목록을 간단한 카드 형태로 표시
+                    for idx, row in new_announcements.iterrows():
+                        announcement_name = row.get('공고제목', 'N/A')
+                        
+                        # 개별 공고 확인 상태 관리 (공고명 기반)
+                        announcement_key = f"announcement_{company['id']}_{announcement_name}"
+                        
+                        # 이미 확인된 공고는 건너뛰기
+                        if st.session_state.get(announcement_key, False):
+                            continue
+                            
+                        with st.container():
+                            col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
+                            
+                            with col1:
+                                st.write(f"**{announcement_name}**")
+                                if '기관명' in row and pd.notna(row['기관명']):
+                                    st.caption(f"📋 {row['기관명']}")
+                                if '매칭이유' in row and pd.notna(row['매칭이유']):
+                                    st.caption(f"💡 {row['매칭이유']}")
+                            
+                            with col2:
+                                if '총점수' in row and pd.notna(row['총점수']):
+                                    st.metric("점수", f"{row['총점수']:.0f}")
+                                if '적합도' in row and pd.notna(row['적합도']):
+                                    st.caption(f"적합도: {row['적합도']}")
+                            
+                            with col3:
+                                if '접수마감일' in row and pd.notna(row['접수마감일']):
+                                    st.caption(f"마감: {row['접수마감일']}")
+                                if '공고보기' in row and pd.notna(row['공고보기']):
+                                    st.link_button("공고보기", row['공고보기'])
+                            
+                            with col4:
+                                # 개별 확인 버튼
+                                button_key = f"confirm_{company['id']}_{idx}_{announcement_name}"
+                                if st.button("✅ 확인", key=button_key, type="secondary", use_container_width=True):
+                                    # 현재 확인된 공고 목록에 추가
+                                    current_seen = st.session_state.get('individual_seen_announcements', [])
+                                    if announcement_name not in current_seen:
+                                        current_seen.append(announcement_name)
+                                        st.session_state['individual_seen_announcements'] = current_seen
+                                    
+                                    # 개별 공고 확인 상태 저장
+                                    st.session_state[announcement_key] = True
+                                    
+                                    # 데이터베이스에 저장
+                                    if save_notifications(company['id'], current_seen):
+                                        st.success(f"✅ '{announcement_name}' 확인 처리되었습니다!")
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ 확인 처리에 실패했습니다.")
+                            
+                            st.divider()
+                    
+                    st.markdown('</div>', unsafe_allow_html=True)
+                            
+            else:
+                # 신규 공고가 없는 경우
+                if last_seen_names:
+                    # 확인 처리된 공고가 있는 경우
+                    st.info(f"✅ 모든 공고를 확인 처리했습니다! (총 {len(last_seen_names)}개 공고 확인됨)")
+                    
+                    # 확인된 공고 목록을 접을 수 있는 형태로 표시
+                    with st.expander("📋 확인된 공고 목록 보기", expanded=False):
+                        for i, name in enumerate(last_seen_names, 1):
+                            st.write(f"{i}. {name}")
+                    
+                    # 새로고침 버튼
+                    col1, col2, col3 = st.columns([1, 2, 1])
+                    with col2:
+                        if st.button("🔄 새로고침", use_container_width=True):
+                            st.session_state['notifications_processed'] = False
+                            st.rerun()
+                else:
+                    # 아예 공고가 없는 경우
+                    st.info("신규 공고가 없습니다.")
         else:
             st.info("해당 회사의 활성 추천이 없습니다.")
     else:
         st.info("활성 추천 데이터가 없습니다.")
 
 def render_roadmap_tab():
-    """12개월 로드맵 탭 렌더링 (recommendations2 테이블 사용)"""
+    """12개월 로드맵 탭 렌더링 (recommendations3 테이블 사용)"""
     if 'selected_company' not in st.session_state:
         st.info("사이드바에서 회사를 선택해주세요.")
         return
@@ -1070,7 +1588,7 @@ def render_roadmap_tab():
     display_name = company.get('company_name', company.get('name', 'Unknown'))
     st.subheader(f"🗓️ {display_name} 12개월 로드맵")
     
-    # 추천 데이터 로드 (recommend2 테이블 사용)
+    # 추천 데이터 로드 (recommend3 테이블 사용)
     recommendations2_df = load_recommendations2(company['id'])
     
     # 중복 제거: 공고명별로 가장 높은 총점수를 가진 레코드만 유지
@@ -1084,19 +1602,19 @@ def render_roadmap_tab():
             st.error("접수시작일 컬럼을 찾을 수 없습니다.")
             return
         
-        # 접수시작일에서 월을 추출하는 함수
+        # 접수시작일에서 월을 추출하는 함수 - 최적화된 버전
+        @st.cache_data
         def extract_month_from_date(date_str):
-            """접수시작일에서 월을 추출하는 함수"""
+            """접수시작일에서 월을 추출하는 함수 - 캐싱 적용"""
             if pd.isna(date_str) or date_str == '' or str(date_str).strip() == '':
                 return None
             
             date_str = str(date_str).strip()
             
-            # YYYY-MM-DD 형식인 경우
+            # YYYY-MM-DD 형식인 경우 (가장 일반적) - 최적화
             if len(date_str) == 10 and date_str.count('-') == 2:
                 try:
-                    date_obj = pd.to_datetime(date_str, format='%Y-%m-%d')
-                    return date_obj.month
+                    return int(date_str.split('-')[1])  # 월 부분만 추출
                 except:
                     pass
             
@@ -1176,14 +1694,18 @@ def render_roadmap_tab():
                         month_matches_df = month_matches_df.sort_values('총점수', ascending=False)
                     
                     # 표시할 컬럼들 정의
-                    display_columns = ['총점수', '공고제목', '공고보기', '접수시작일', '접수마감일', '지역', '기관명', '매칭이유']
+                    display_columns = ['총점수', '적합도', '공고제목', '공고보기', '접수시작일', '접수마감일', '지역', '기관명', '매칭이유']
                     
                     available_columns = [col for col in display_columns if col in month_matches_df.columns]
                     
                     # 데이터 타입 정리
                     display_df = month_matches_df[available_columns].copy()
                     for col in display_df.columns:
-                        if display_df[col].dtype == 'object':
+                        try:
+                            if display_df[col].dtype == 'object':
+                                display_df[col] = display_df[col].astype(str)
+                        except:
+                            # dtype 접근에 실패하면 문자열로 변환
                             display_df[col] = display_df[col].astype(str)
                     
                     # 컬럼 설정
@@ -1195,7 +1717,8 @@ def render_roadmap_tab():
                         "접수마감일": st.column_config.DateColumn("접수마감일", width="small"),
                         "지역": st.column_config.TextColumn("지역", width="small"),
                         "기관명": st.column_config.TextColumn("기관명", width="medium"),
-                        "총점수": st.column_config.NumberColumn("점수", format="%.0f", width="small")
+                        "총점수": st.column_config.NumberColumn("점수", format="%.0f", width="small"),
+                        "적합도": st.column_config.TextColumn("적합도", width="small")
                     }
                     
                     st.dataframe(
@@ -1228,20 +1751,20 @@ def render_roadmap_tab():
         st.info("추천 데이터가 없습니다.")
 
 def render_recommendations2_tab():
-    """추천 데이터 탭 렌더링 (recommendations2 테이블)"""
+    """추천 데이터 탭 렌더링 (recommendations3 테이블)"""
     if 'selected_company' not in st.session_state:
         st.info("사이드바에서 회사를 선택해주세요.")
         return
     
     company = st.session_state['selected_company']
     display_name = company.get('company_name', company.get('name', 'Unknown'))
-    st.subheader(f"📊 {display_name} 추천 데이터 (한글 버전)")
+    st.subheader(f"📊 {display_name} 추천 데이터")
     
     # 탭 선택
-    tab1, tab2, tab3 = st.tabs(["전체 추천", "활성 공고만", "필터 옵션"])
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["전체 추천", "활성 공고만", "추천(지역)", "추천(키워드)", "추천(규칙)", "추천(3대장)", "필터 옵션"])
     
     with tab1:
-        # 전체 추천 (recommendations2 테이블만 사용)
+        # 전체 추천 (recommendations3 테이블만 사용)
         recommendations2_df = load_recommendations2(company['id'])
         
         if not recommendations2_df.empty:
@@ -1254,16 +1777,20 @@ def render_recommendations2_tab():
                 recommendations2_df = recommendations2_df.sort_values('총점수', ascending=False).drop_duplicates(subset=['공고제목'], keep='first')
                 recommendations2_df = recommendations2_df.sort_values('총점수', ascending=False)
             
-            st.info(f"📊 총 {len(recommendations2_df)}개의 추천 공고 (recommend2 테이블, 중복 제거)")
+            st.info(f"📊 총 {len(recommendations2_df)}개의 추천 공고 (recommend3 테이블, 중복 제거)")
             
             # 컬럼명을 한글로 매핑 (공고보기 링크 추가, 순서 조정)
-            display_columns = ['총점수', '공고제목', '지원가능여부', '공고보기', '접수시작일', '접수마감일', '공고출처', '매칭이유', '공고상세정보']
+            display_columns = ['총점수', '적합도', '공고제목', '지원가능여부', '공고보기', '접수시작일', '접수마감일', '공고출처', '매칭이유', '공고상세정보']
             available_columns = [col for col in display_columns if col in recommendations2_df.columns]
             
             # 데이터 타입 정리
             display_df = recommendations2_df[available_columns].copy()
             for col in display_df.columns:
-                if display_df[col].dtype == 'object':
+                try:
+                    if display_df[col].dtype == 'object':
+                        display_df[col] = display_df[col].astype(str)
+                except:
+                    # dtype 접근에 실패하면 문자열로 변환
                     display_df[col] = display_df[col].astype(str)
             
             # 추천순위로 정렬
@@ -1282,14 +1809,15 @@ def render_recommendations2_tab():
                     "접수마감일": st.column_config.DateColumn("접수마감일", width="small"),
                     "공고출처": st.column_config.TextColumn("공고출처", width="small"),
                     "공고상세정보": st.column_config.TextColumn("공고상세정보", width="large"),
-                    "총점수": st.column_config.NumberColumn("점수", format="%.0f", width="small")
+                    "총점수": st.column_config.NumberColumn("점수", format="%.0f", width="small"),
+                    "적합도": st.column_config.TextColumn("적합도", width="small")
                 }
             )
         else:
             st.info("해당 회사의 추천 결과가 없습니다.")
     
     with tab2:
-        # 활성 공고만 (recommend_active2 테이블 사용)
+        # 활성 공고만 (recommend_active3 테이블 사용)
         active_recommendations_df = load_recommendations3_active(company['id'])
         if not active_recommendations_df.empty:
             # 중복 제거: 공고명별로 가장 높은 총점수를 가진 레코드만 유지
@@ -1297,15 +1825,19 @@ def render_recommendations2_tab():
                 active_recommendations_df = active_recommendations_df.sort_values('총점수', ascending=False).drop_duplicates(subset=['공고제목'], keep='first')
                 active_recommendations_df = active_recommendations_df.sort_values('총점수', ascending=False)
             
-            st.success(f"🟢 {len(active_recommendations_df)}개의 활성 공고가 있습니다! (recommend_active2 테이블, 중복 제거)")
+            st.success(f"🟢 {len(active_recommendations_df)}개의 활성 공고가 있습니다! (recommend_active3 테이블, 중복 제거)")
             
-            display_columns = ['총점수', '공고제목', '지원가능여부', '공고보기', '접수시작일', '접수마감일', '지역', '기관명', '매칭이유']
+            display_columns = ['총점수', '적합도', '공고제목', '지원가능여부', '공고보기', '접수시작일', '접수마감일', '지역', '기관명', '매칭이유']
             available_columns = [col for col in display_columns if col in active_recommendations_df.columns]
             
             # 데이터 타입 정리
             display_df = active_recommendations_df[available_columns].copy()
             for col in display_df.columns:
-                if display_df[col].dtype == 'object':
+                try:
+                    if display_df[col].dtype == 'object':
+                        display_df[col] = display_df[col].astype(str)
+                except:
+                    # dtype 접근에 실패하면 문자열로 변환
                     display_df[col] = display_df[col].astype(str)
             
             st.dataframe(
@@ -1320,13 +1852,332 @@ def render_recommendations2_tab():
                     "접수마감일": st.column_config.DateColumn("접수마감일", width="small"),
                     "공고출처": st.column_config.TextColumn("공고출처", width="small"),
                     "공고상세정보": st.column_config.TextColumn("공고상세정보", width="large"),
-                    "총점수": st.column_config.NumberColumn("점수", format="%.0f", width="small")
+                    "총점수": st.column_config.NumberColumn("점수", format="%.0f", width="small"),
+                    "적합도": st.column_config.TextColumn("적합도", width="small")
                 }
             )
         else:
             st.info("활성 추천 데이터가 없습니다.")
     
     with tab3:
+        # 추천(지역) 탭 (recommend_region4 테이블 사용)
+        region_recommendations_df = load_recommendations_region4(company['id'])
+        
+        if not region_recommendations_df.empty:
+            # 총점수로 정렬
+            if '총점수' in region_recommendations_df.columns:
+                region_recommendations_df = region_recommendations_df.sort_values('총점수', ascending=False)
+            
+            st.success(f"🗺️ {len(region_recommendations_df)}개의 지역별 추천이 있습니다! (recommend_region4 테이블)")
+            
+            # 지역별 통계 표시
+            if '회사지역' in region_recommendations_df.columns:
+                region_stats = region_recommendations_df['회사지역'].value_counts()
+                st.write("**지역별 추천 현황:**")
+                col1, col2, col3 = st.columns(3)
+                for i, (region, count) in enumerate(region_stats.items()):
+                    if i < 3:
+                        with [col1, col2, col3][i]:
+                            st.metric(f"{region}", f"{count}개")
+            
+            # 지역 매칭 여부 표시
+            if '지역매칭' in region_recommendations_df.columns:
+                region_match_count = region_recommendations_df['지역매칭'].sum() if region_recommendations_df['지역매칭'].dtype == bool else len(region_recommendations_df[region_recommendations_df['지역매칭'] == True])
+                total_count = len(region_recommendations_df)
+                st.metric("지역 매칭률", f"{region_match_count}/{total_count} ({region_match_count/total_count*100:.1f}%)")
+            
+            # 표시할 컬럼들 정의 (지역 관련 컬럼 우선, 시기점수와 주요업종 제외)
+            display_columns = [
+                '총점수', '총점수(10점만점)', '적합도', '공고제목', '회사지역', '프로그램지역', 
+                '지역매칭', '지원가능여부', '공고보기', '접수시작일', '접수마감일', 
+                '공고출처', '업종점수', '지역점수', '유사도'
+            ]
+            available_columns = [col for col in display_columns if col in region_recommendations_df.columns]
+            
+            # 데이터 타입 정리
+            display_df = region_recommendations_df[available_columns].copy()
+            
+            # 중복 컬럼 제거
+            display_df = display_df.loc[:, ~display_df.columns.duplicated()]
+            for col in display_df.columns:
+                try:
+                    if display_df[col].dtype == 'object':
+                        display_df[col] = display_df[col].astype(str)
+                except:
+                    # dtype 접근에 실패하면 문자열로 변환
+                    display_df[col] = display_df[col].astype(str)
+            
+            # 인덱스 리셋 (중복 인덱스 문제 해결)
+            display_df = display_df.reset_index(drop=True)
+            
+            # 깔끔한 데이터프레임 표시 (색상 하이라이팅 제거)
+            st.dataframe(
+                display_df,
+                width='stretch',
+                column_config={
+                    "공고제목": st.column_config.TextColumn("공고명", width="large"),
+                    "회사지역": st.column_config.TextColumn("회사지역", width="small"),
+                    "프로그램지역": st.column_config.TextColumn("프로그램지역", width="small"),
+                    "지역매칭": st.column_config.TextColumn("지역매칭", width="small"),
+                    "지원가능여부": st.column_config.TextColumn("지원가능여부", width="small"),
+                    "공고보기": st.column_config.LinkColumn("공고보기", width="medium", display_text="공고 보기"),
+                    "접수시작일": st.column_config.DateColumn("접수시작일", width="small"),
+                    "접수마감일": st.column_config.DateColumn("접수마감일", width="small"),
+                    "공고출처": st.column_config.TextColumn("공고출처", width="small"),
+                    "업종점수": st.column_config.NumberColumn("업종점수", format="%.1f", width="small"),
+                    "지역점수": st.column_config.NumberColumn("지역점수", format="%.0f", width="small"),
+                    "유사도": st.column_config.NumberColumn("유사도", format="%.3f", width="small"),
+                    "총점수": st.column_config.NumberColumn("총점수", format="%.1f", width="small"),
+                    "총점수(10점만점)": st.column_config.NumberColumn("총점수(10점만점)", format="%.1f", width="small"),
+                    "적합도": st.column_config.TextColumn("적합도", width="small")
+                }
+            )
+            
+            # CSV 다운로드
+            csv = region_recommendations_df.to_csv(index=False, encoding='utf-8-sig')
+            download_name = company.get('company_name', company.get('name', 'Unknown'))
+            st.download_button(
+                label="지역별 추천 데이터 다운로드 (CSV)",
+                data=csv,
+                file_name=f"{download_name}_region_recommendations_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("지역별 추천 데이터가 없습니다.")
+    
+    with tab4:
+        # 추천(키워드) 탭 (recommend_keyword4 테이블 사용)
+        keyword_recommendations_df = load_recommendations_keyword4(company['id'])
+        
+        if not keyword_recommendations_df.empty:
+            # 키워드점수로 정렬
+            if '키워드점수' in keyword_recommendations_df.columns:
+                keyword_recommendations_df = keyword_recommendations_df.sort_values('키워드점수', ascending=False)
+            
+            st.success(f"🔑 {len(keyword_recommendations_df)}개의 키워드별 추천이 있습니다! (recommend_keyword4 테이블)")
+            
+            # 키워드 점수 통계 표시
+            if '키워드점수' in keyword_recommendations_df.columns:
+                avg_keyword_score = keyword_recommendations_df['키워드점수'].mean()
+                max_keyword_score = keyword_recommendations_df['키워드점수'].max()
+                st.metric("평균 키워드 점수", f"{avg_keyword_score:.2f}")
+                st.metric("최고 키워드 점수", f"{max_keyword_score:.2f}")
+            
+            # 표시할 컬럼들 정의 (키워드 관련 컬럼 우선, 일부 컬럼 제외)
+            display_columns = [
+                '키워드점수', '공고제목', '회사명', '공고보기', '접수시작일', '접수마감일', 
+                '키워드교집합', '프로그램ID'
+            ]
+            available_columns = [col for col in display_columns if col in keyword_recommendations_df.columns]
+            
+            # 데이터 타입 정리
+            display_df = keyword_recommendations_df[available_columns].copy()
+            
+            # 중복 컬럼 제거
+            display_df = display_df.loc[:, ~display_df.columns.duplicated()]
+            for col in display_df.columns:
+                try:
+                    if str(display_df[col].dtype) == 'object':
+                        display_df[col] = display_df[col].astype(str)
+                except:
+                    # dtype 접근에 실패하면 문자열로 변환
+                    display_df[col] = display_df[col].astype(str)
+            
+            # 인덱스 리셋 (중복 인덱스 문제 해결)
+            display_df = display_df.reset_index(drop=True)
+            
+            # 깔끔한 데이터프레임 표시
+            st.dataframe(
+                display_df,
+                width='stretch',
+                column_config={
+                    "공고제목": st.column_config.TextColumn("공고명", width="large"),
+                    "회사명": st.column_config.TextColumn("회사명", width="small"),
+                    "공고보기": st.column_config.LinkColumn("공고보기", width="medium", display_text="공고 보기"),
+                    "접수시작일": st.column_config.DateColumn("접수시작일", width="small"),
+                    "접수마감일": st.column_config.DateColumn("접수마감일", width="small"),
+                    "키워드점수": st.column_config.NumberColumn("키워드점수", format="%.2f", width="small"),
+                    "키워드교집합": st.column_config.TextColumn("키워드교집합", width="medium"),
+                    "프로그램ID": st.column_config.TextColumn("프로그램ID", width="small")
+                }
+            )
+            
+            # CSV 다운로드
+            csv = keyword_recommendations_df.to_csv(index=False, encoding='utf-8-sig')
+            download_name = company.get('company_name', company.get('name', 'Unknown'))
+            st.download_button(
+                label="키워드별 추천 데이터 다운로드 (CSV)",
+                data=csv,
+                file_name=f"{download_name}_keyword_recommendations_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("키워드별 추천 데이터가 없습니다.")
+    
+    with tab5:
+        # 추천(규칙) 탭 (recommend_rules4 테이블 사용)
+        rules_recommendations_df = load_recommendations_rules4(company['id'])
+        
+        if not rules_recommendations_df.empty:
+            # 통과여부로 정렬
+            if '통과여부' in rules_recommendations_df.columns:
+                rules_recommendations_df = rules_recommendations_df.sort_values('통과여부', ascending=False)
+            
+            st.success(f"📋 {len(rules_recommendations_df)}개의 규칙별 추천이 있습니다! (recommend_rules4 테이블)")
+            
+            # 통과 통계 표시
+            if '통과여부' in rules_recommendations_df.columns:
+                passed_count = rules_recommendations_df['통과여부'].sum() if rules_recommendations_df['통과여부'].dtype == bool else len(rules_recommendations_df[rules_recommendations_df['통과여부'] == True])
+                total_count = len(rules_recommendations_df)
+                st.metric("규칙 통과율", f"{passed_count}/{total_count} ({passed_count/total_count*100:.1f}%)")
+            
+            # 표시할 컬럼들 정의 (규칙 관련 컬럼 우선)
+            display_columns = [
+                '통과여부', '공고제목', '회사명', '공고보기', '접수시작일', '접수마감일', 
+                '통과이유', '회사지역', '프로그램지역', '회사업력', '최소업력', '최대업력',
+                '회사업종', '프로그램업종', '우선순위유형', '프로그램ID'
+            ]
+            available_columns = [col for col in display_columns if col in rules_recommendations_df.columns]
+            
+            # 데이터 타입 정리
+            display_df = rules_recommendations_df[available_columns].copy()
+            
+            # 중복 컬럼 제거
+            display_df = display_df.loc[:, ~display_df.columns.duplicated()]
+            for col in display_df.columns:
+                try:
+                    if str(display_df[col].dtype) == 'object':
+                        display_df[col] = display_df[col].astype(str)
+                except:
+                    # dtype 접근에 실패하면 문자열로 변환
+                    display_df[col] = display_df[col].astype(str)
+            
+            # 인덱스 리셋 (중복 인덱스 문제 해결)
+            display_df = display_df.reset_index(drop=True)
+            
+            # 깔끔한 데이터프레임 표시
+            st.dataframe(
+                display_df,
+                width='stretch',
+                column_config={
+                    "공고제목": st.column_config.TextColumn("공고명", width="large"),
+                    "회사명": st.column_config.TextColumn("회사명", width="small"),
+                    "공고보기": st.column_config.LinkColumn("공고보기", width="medium", display_text="공고 보기"),
+                    "접수시작일": st.column_config.DateColumn("접수시작일", width="small"),
+                    "접수마감일": st.column_config.DateColumn("접수마감일", width="small"),
+                    "통과여부": st.column_config.TextColumn("통과여부", width="small"),
+                    "통과이유": st.column_config.TextColumn("통과이유", width="large"),
+                    "회사지역": st.column_config.TextColumn("회사지역", width="small"),
+                    "프로그램지역": st.column_config.TextColumn("프로그램지역", width="small"),
+                    "회사업력": st.column_config.NumberColumn("회사업력", format="%.0f", width="small"),
+                    "최소업력": st.column_config.NumberColumn("최소업력", format="%.0f", width="small"),
+                    "최대업력": st.column_config.NumberColumn("최대업력", format="%.0f", width="small"),
+                    "회사업종": st.column_config.TextColumn("회사업종", width="medium"),
+                    "프로그램업종": st.column_config.TextColumn("프로그램업종", width="medium"),
+                    "우선순위유형": st.column_config.TextColumn("우선순위유형", width="small"),
+                    "프로그램ID": st.column_config.TextColumn("프로그램ID", width="small")
+                }
+            )
+            
+            # CSV 다운로드
+            csv = rules_recommendations_df.to_csv(index=False, encoding='utf-8-sig')
+            download_name = company.get('company_name', company.get('name', 'Unknown'))
+            st.download_button(
+                label="규칙별 추천 데이터 다운로드 (CSV)",
+                data=csv,
+                file_name=f"{download_name}_rules_recommendations_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("규칙별 추천 데이터가 없습니다.")
+    
+    with tab6:
+        # 추천(3대장) 탭 (recommend_priority4 테이블 사용)
+        priority_recommendations_df = load_recommendations_priority4(company['id'])
+        
+        if not priority_recommendations_df.empty:
+            # 총점수로 정렬
+            if '총점수' in priority_recommendations_df.columns:
+                priority_recommendations_df = priority_recommendations_df.sort_values('총점수', ascending=False)
+            
+            st.success(f"🏆 {len(priority_recommendations_df)}개의 3대장별 추천이 있습니다! (recommend_priority4 테이블)")
+            
+            # 3대장 점수 통계 표시
+            if '총점수' in priority_recommendations_df.columns:
+                avg_score = priority_recommendations_df['총점수'].mean()
+                max_score = priority_recommendations_df['총점수'].max()
+                st.metric("평균 총점수", f"{avg_score:.2f}")
+                st.metric("최고 총점수", f"{max_score:.2f}")
+            
+            # 우선순위 유형별 통계
+            if '우선순위유형' in priority_recommendations_df.columns:
+                priority_stats = priority_recommendations_df['우선순위유형'].value_counts()
+                st.write("**우선순위 유형별 현황:**")
+                col1, col2, col3 = st.columns(3)
+                for i, (priority_type, count) in enumerate(priority_stats.items()):
+                    if i < 3:
+                        with [col1, col2, col3][i]:
+                            st.metric(f"{priority_type}", f"{count}개")
+            
+            # 표시할 컬럼들 정의 (3대장 관련 컬럼 우선, 시기점수와 주요업종 제외)
+            display_columns = [
+                '총점수', '총점수(10점만점)', '공고제목', '우선순위유형', '적합도', '회사명', '공고보기', '접수시작일', '접수마감일', 
+                '공고출처', '업종점수', '지역점수', '유사도', '프로그램ID', '지원가능여부'
+            ]
+            available_columns = [col for col in display_columns if col in priority_recommendations_df.columns]
+            
+            # 데이터 타입 정리
+            display_df = priority_recommendations_df[available_columns].copy()
+            
+            # 중복 컬럼 제거
+            display_df = display_df.loc[:, ~display_df.columns.duplicated()]
+            for col in display_df.columns:
+                try:
+                    if str(display_df[col].dtype) == 'object':
+                        display_df[col] = display_df[col].astype(str)
+                except:
+                    # dtype 접근에 실패하면 문자열로 변환
+                    display_df[col] = display_df[col].astype(str)
+            
+            # 인덱스 리셋 (중복 인덱스 문제 해결)
+            display_df = display_df.reset_index(drop=True)
+            
+            # 깔끔한 데이터프레임 표시
+            st.dataframe(
+                display_df,
+                width='stretch',
+                column_config={
+                    "공고제목": st.column_config.TextColumn("공고명", width="large"),
+                    "회사명": st.column_config.TextColumn("회사명", width="small"),
+                    "공고보기": st.column_config.LinkColumn("공고보기", width="medium", display_text="공고 보기"),
+                    "접수시작일": st.column_config.DateColumn("접수시작일", width="small"),
+                    "접수마감일": st.column_config.DateColumn("접수마감일", width="small"),
+                    "공고출처": st.column_config.TextColumn("공고출처", width="small"),
+                    "업종점수": st.column_config.NumberColumn("업종점수", format="%.1f", width="small"),
+                    "지역점수": st.column_config.NumberColumn("지역점수", format="%.0f", width="small"),
+                    "유사도": st.column_config.NumberColumn("유사도", format="%.3f", width="small"),
+                    "우선순위유형": st.column_config.TextColumn("우선순위유형", width="small"),
+                    "프로그램ID": st.column_config.TextColumn("프로그램ID", width="small"),
+                    "지원가능여부": st.column_config.TextColumn("지원가능여부", width="small"),
+                    "총점수": st.column_config.NumberColumn("총점수", format="%.1f", width="small"),
+                    "총점수(10점만점)": st.column_config.NumberColumn("총점수(10점만점)", format="%.1f", width="small"),
+                    "적합도": st.column_config.TextColumn("적합도", width="small")
+                }
+            )
+            
+            # CSV 다운로드
+            csv = priority_recommendations_df.to_csv(index=False, encoding='utf-8-sig')
+            download_name = company.get('company_name', company.get('name', 'Unknown'))
+            st.download_button(
+                label="3대장별 추천 데이터 다운로드 (CSV)",
+                data=csv,
+                file_name=f"{download_name}_priority_recommendations_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("3대장별 추천 데이터가 없습니다.")
+    
+    with tab7:
         # 필터 옵션 탭
         st.subheader("🔍 필터 옵션")
         
@@ -1460,7 +2311,7 @@ def main():
                 st.metric("업종", company.get('industry', 'N/A'))
         
         # 탭 구성
-        tab1, tab2, tab3 = st.tabs(["📊 추천 데이터 (한글)", "🔔 신규 공고 알림", "🗓️ 12개월 로드맵"])
+        tab1, tab2, tab3 = st.tabs(["📊 추천 데이터", "🔔 신규 공고 알림", "🗓️ 12개월 로드맵"])
         
         with tab1:
             render_recommendations2_tab()

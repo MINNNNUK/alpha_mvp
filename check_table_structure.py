@@ -1,72 +1,68 @@
-#!/usr/bin/env python3
 """
-alpha_companies 테이블 구조 확인 스크립트
+테이블 구조 확인 스크립트
 """
-
-import os
 from supabase import create_client, Client
 from config import SUPABASE_URL, SUPABASE_KEY
+import logging
 
-def init_supabase():
-    """Supabase 클라이언트 초기화"""
-    try:
-        url = os.getenv("SUPABASE_URL", SUPABASE_URL)
-        key = os.getenv("SUPABASE_KEY", SUPABASE_KEY)
-        
-        if url == "https://demo.supabase.co" or key == "demo-key":
-            print("⚠️ 데모 모드 - 실제 Supabase 설정이 필요합니다.")
-            return None
-        
-        return create_client(url, key)
-    except Exception as e:
-        print(f"Supabase 연결 실패: {e}")
-        return None
+# 로깅 설정
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def check_table_structure(supabase: Client):
+def check_table_structure(supabase: Client, table_name: str):
     """테이블 구조 확인"""
     try:
-        # 첫 번째 레코드만 가져와서 컬럼 구조 확인
-        result = supabase.table('alpha_companies').select('*').limit(1).execute()
+        # 테이블에 데이터 삽입 시도 (빈 데이터로)
+        test_data = {
+            'company_id': 'test',
+            'company_name': 'test',
+            'program_id': 'test',
+            'title': 'test',
+            'priority_type': 'test',
+            'apply_start': 'test',
+            'apply_end': 'test',
+            'url': 'test',
+            'kw_intersection': 'test',
+            'kw_tfidf': 0.0,
+            'kw_bm25': 0.0,
+            'kw_phrase_hit': 0,
+            'kw_must_have_hits': 0,
+            'kw_forbid_hit': 0,
+            'kw_gate': 'test',
+            'kw_reason': 'test',
+            'keyword_points': 0.0
+        }
         
+        result = supabase.table(table_name).insert(test_data).execute()
+        logger.info(f"테스트 데이터 삽입 성공: {result.data}")
+        
+        # 삽입된 데이터 조회
+        result = supabase.table(table_name).select("*").limit(1).execute()
         if result.data:
-            print("📊 alpha_companies 테이블 컬럼 구조:")
-            print("=" * 50)
+            columns = list(result.data[0].keys())
+            logger.info(f"테이블 '{table_name}'의 컬럼 목록: {columns}")
             
-            first_record = result.data[0]
-            for i, (key, value) in enumerate(first_record.items(), 1):
-                print(f"{i:2}. {key}: {type(value).__name__}")
-            
-            print(f"\n총 {len(first_record)}개 컬럼")
-            
-            # 모든 데이터 조회해서 No. 범위 확인
-            all_result = supabase.table('alpha_companies').select('"No."').execute()
-            if all_result.data:
-                numbers = [record['No.'] for record in all_result.data if record.get('No.')]
-                print(f"\nNo. 범위: {min(numbers)} ~ {max(numbers)} (총 {len(numbers)}개)")
-                
-        else:
-            print("❌ 테이블에 데이터가 없습니다.")
-            
+            # 테스트 데이터 삭제
+            supabase.table(table_name).delete().eq('company_id', 'test').execute()
+            logger.info("테스트 데이터 삭제 완료")
+        
     except Exception as e:
-        print(f"❌ 테이블 구조 확인 실패: {e}")
+        logger.error(f"테이블 구조 확인 중 오류 발생: {e}")
 
 def main():
     """메인 함수"""
-    print("🔍 alpha_companies 테이블 구조 확인")
-    print("=" * 40)
+    table_name = "recommend_keyword4"
     
-    supabase = init_supabase()
-    if not supabase:
-        print("❌ Supabase 연결 실패")
+    # Supabase 클라이언트 생성
+    try:
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        logger.info("Supabase 연결 성공")
+    except Exception as e:
+        logger.error(f"Supabase 연결 실패: {e}")
         return
     
-    check_table_structure(supabase)
+    # 테이블 구조 확인
+    check_table_structure(supabase, table_name)
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-

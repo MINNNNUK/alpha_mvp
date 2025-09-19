@@ -18,7 +18,7 @@ def test_connection():
         print("✅ Supabase 클라이언트 생성 성공")
         
         # 테이블 존재 확인
-        tables = ['companies', 'announcements', 'recommendations', 'notification_states']
+        tables = ['companies', 'announcements', 'recommendations', 'notification_states', 'alpha_companies', 'recommend_region4', 'recommend_keyword4']
         
         for table in tables:
             try:
